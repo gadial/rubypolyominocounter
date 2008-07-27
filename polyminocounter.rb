@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'optparse'
+require 'set'
 
 class Square
 	include Comparable
@@ -35,14 +36,13 @@ end
 class Grid
 	def initialize(dimensions)
 		@dimensions=dimensions
-		@squares=[]
+		@squares = Set.new
 	end
 	def origin
 		return Square.new([0]*@dimensions)
 	end
 	def << (square)
 		@squares << square
-		@squares.uniq!
 	end
 
 	def new_neighbors(square)
