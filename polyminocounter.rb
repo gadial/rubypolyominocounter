@@ -1,3 +1,7 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+
 class Square
 	include Comparable
 	attr_accessor :coords
@@ -86,5 +90,31 @@ class RedelmeierAlgorithm
 	end
 end
 
-test=RedelmeierAlgorithm.new(6,2)
-test.run.print_results
+def parse_options
+  options = {}
+
+  opts = OptionParser.new
+  opts.on("-q", "--quiet") do
+    options[:quiet] = true
+  end
+  opts.on("-n N", "(mandatory)", Integer) do |n|
+    options[:n] = n
+  end
+  opts.on("-d D", "(mandatory)", Integer) do |d|
+    options[:d] = d
+  end
+
+  begin
+    opts.parse!
+    raise unless options[:n] and options[:d]
+  rescue
+    puts opts
+    exit 1
+  end
+
+  options
+end
+
+options = parse_options
+test = RedelmeierAlgorithm.new(options[:n], options[:d])
+test.run.print_results unless options[:quiet]
