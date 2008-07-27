@@ -1,5 +1,5 @@
 class Square
-	include comparable
+	include Comparable
 	attr_accessor :coords
 	def initialize(coords)
 		self.coords=coords
@@ -23,16 +23,29 @@ class Square
 	def <=> (other)
 		self.coords <=> other.coords
 	end
+	def inspect
+		coords.inspect
+	end
 end
 
 class Grid
 	def initialize(dimensions)
 		@dimensions=dimensions
+		@squares=[]
 	end
 	def origin
 		return Square.new([0]*@dimensions)
 	end
 	def << (square)
+		@squares << square
+		@squares.uniq!
+	end
+
+	def new_neighbors(square)
+		#neighbors of square that are not neighbors of any other polyomino square
+		#assumes square is not yet in the polyomino
+		old_neighbors=@squares.collect{|s| s.neighbors}.uniq
+		return square.neighbors.reject{|s| old_neighbors.include?(s)}.reject{|s| s<self.origin}
 	end
 end
 
@@ -43,24 +56,35 @@ class RedelmeierAlgorithm
 		self.d=d
 	end
 
+	def add_square(untried_set,new_square)
+		new_untried_set=untried_set.dup
+		new_neighbors=self.grid.new_neighbors(new_square)
+		new_untried_set+=new_neighbors
+		self.grid << new_square
+		return new_untried_set
+	end
+
 	def run
-          self.grid=Grid.new(d)
-          untried_set=[grid.origin]
-          self.count=[0]*n
-          recurse(0,untried_set)
+                self.grid=Grid.new(self.d)
+                untried_set=[grid.origin]
+                self.count=[0]*self.n
+                recurse(1,untried_set)
+		return self
 	end
 
 	def recurse(current_size,untried_set)
+# 		puts "new recursion with untried_set: #{untried_set.inspect}"
 		while not untried_set.empty?
 			new_square=untried_set.pop
-			new_untried_set=grid.modify_untried_set(untried_set,new_square)
-			self.grid << new_square
-			current_size+=1
-			self.count[current_size]+=1
-			recurse(current_size,new_untried_set) unless current_size>=self.n
+			new_untried_set=add_square(untried_set,new_square)
+			self.count[current_size-1]+=1
+			recurse(current_size+1,new_untried_set) unless current_size>=self.n
 		end
 	end
 	def print_results
 		puts count.inspect
 	end
 end
+
+test=RedelmeierAlgorithm.new(6,2)
+test.run.print_results
