@@ -115,6 +115,8 @@ def parse_options
   options
 end
 
-options = parse_options
-test = RedelmeierAlgorithm.new(options[:n], options[:d])
-test.run.print_results unless options[:quiet]
+if $0 == __FILE__
+  options = parse_options
+  test = RedelmeierAlgorithm.new(options[:n], options[:d])
+  test.run.print_results unless options[:quiet]
+end
