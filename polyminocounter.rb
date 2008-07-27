@@ -45,6 +45,30 @@ class Grid
 		@squares << square
 	end
 
+  def to_s
+    raise "Cannot visualize non-2D grid" unless @dimensions == 2
+    cols = @squares.collect { |sqr| sqr.coords[0] }.max + 1
+    rows = @squares.collect { |sqr| sqr.coords[1] }.max + 1
+    display_arr = []
+    rows.times do
+      display_arr << Array.new(cols)
+    end
+
+    @squares.each do |sqr|
+      display_arr[sqr.coords[1]][sqr.coords[0]] = true
+    end
+
+    display_arr.collect do |row|
+      row.collect do |col|
+        if col
+          "x"
+        else
+          "."
+        end
+      end.join("")
+    end.join("\n")
+  end
+
 	def new_neighbors(square)
 		#neighbors of square that are not neighbors of any other polyomino square
 		#assumes square is not yet in the polyomino
