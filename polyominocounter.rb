@@ -3,6 +3,12 @@
 require 'optparse'
 require 'set'
 
+class Array
+	def count_item(x)
+		self.inject(0){|sum, item| x==item ? sum+1 : sum}
+	end
+end
+
 class Square
 	include Comparable
 	attr_accessor :coords
@@ -25,6 +31,12 @@ class Square
 	def hash
 		return self.coords.hash
 	end
+	def eql?(other)
+		return self.coords==other.coords
+	end
+	def ==(other)
+		return self.coords==other.coords
+	end
 	def <=> (other)
 		self.coords <=> other.coords
 	end
@@ -34,6 +46,7 @@ class Square
 end
 
 class Grid
+	attr_reader :squares
 	def initialize(dimensions)
 		@dimensions=dimensions
 		@squares = Set.new
@@ -43,6 +56,9 @@ class Grid
 	end
 	def << (square)
 		@squares << square
+	end
+	def remove_square(square)
+		squares.delete(square)
 	end
 
   def to_s
@@ -73,15 +89,16 @@ class Grid
 		#neighbors of square that are not neighbors of any other polyomino square
 		#assumes square is not yet in the polyomino
 		old_neighbors=@squares.collect{|s| s.neighbors}.uniq
-		return square.neighbors.reject{|s| old_neighbors.include?(s)}.reject{|s| s<self.origin}
+		return square.neighbors.reject{|s| old_neighbors.include?(s) or @squares.include?(s) or s<self.origin}
 	end
 end
 
 class RedelmeierAlgorithm
-	attr_accessor :n, :d, :grid, :count
+	attr_accessor :n, :d, :grid, :count, :polyominoes, :counts_tree_polyominoes
 	def initialize(n,d)
 		self.n=n
 		self.d=d
+		self.counts_tree_polyominoes=false
 	end
 
 	def add_square(untried_set,new_square)
@@ -89,6 +106,7 @@ class RedelmeierAlgorithm
 		new_neighbors=self.grid.new_neighbors(new_square)
 		new_untried_set+=new_neighbors
 		self.grid << new_square
+		new_untried_set.reject!{|s| self.grid.squares.collect{|x| x.neighbors}.flatten.count_item(s)>1} if self.counts_tree_polyominoes
 		return new_untried_set
 	end
 
@@ -96,6 +114,8 @@ class RedelmeierAlgorithm
                 self.grid=Grid.new(self.d)
                 untried_set=[grid.origin]
                 self.count=[0]*self.n
+				self.polyominoes=[]
+				n.times {|i| self.polyominoes[i]=[]}
                 recurse(1,untried_set)
 		return self
 	end
@@ -106,7 +126,9 @@ class RedelmeierAlgorithm
 			new_square=untried_set.pop
 			new_untried_set=add_square(untried_set,new_square)
 			self.count[current_size-1]+=1
+			self.polyominoes[current_size-1] << self.grid.squares.dup
 			recurse(current_size+1,new_untried_set) unless current_size>=self.n
+			self.grid.remove_square(new_square)
 		end
 	end
 	def print_results
