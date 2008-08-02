@@ -88,7 +88,7 @@ class Grid
 	def new_neighbors(square)
 		#neighbors of square that are not neighbors of any other polyomino square
 		#assumes square is not yet in the polyomino
-		old_neighbors=@squares.collect{|s| s.neighbors}.uniq
+		old_neighbors=@squares.collect{|s| s.neighbors}.flatten.uniq
 		return square.neighbors.reject{|s| old_neighbors.include?(s) or @squares.include?(s) or s<self.origin}
 	end
 end
