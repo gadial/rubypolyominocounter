@@ -95,10 +95,10 @@ end
 
 class RedelmeierAlgorithm
 	attr_accessor :n, :d, :grid, :count, :polyominoes, :counts_tree_polyominoes
-	def initialize(n,d)
-		self.n=n
-		self.d=d
-		self.counts_tree_polyominoes=false
+	def initialize(options)
+		self.n=options[:n]
+		self.d=options[:d]
+		self.counts_tree_polyominoes=(options[:trees]==true)
 	end
 
 	def add_square(untried_set,new_square)
@@ -143,6 +143,9 @@ def parse_options
   opts.on("-q", "--quiet") do
     options[:quiet] = true
   end
+  opts.on("-t", "--trees") do
+	options[:trees] = true
+  end
   opts.on("-n N", "(mandatory)", Integer) do |n|
     options[:n] = n
   end
@@ -163,6 +166,6 @@ end
 
 if $0 == __FILE__
   options = parse_options
-  test = RedelmeierAlgorithm.new(options[:n], options[:d])
+  test = RedelmeierAlgorithm.new(options)
   test.run.print_results unless options[:quiet]
 end
