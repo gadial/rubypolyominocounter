@@ -2,7 +2,7 @@
 
 require 'optparse'
 require 'set'
-
+#require 'profile'
 class Array
 	def count_item(x)
 		self.inject(0){|sum, item| x==item ? sum+1 : sum}
@@ -10,12 +10,14 @@ class Array
 end
 
 class Square
+	@@neighbors=Hash.new #optimization
 	include Comparable
 	attr_accessor :coords
 	def initialize(coords)
 		self.coords=coords
+		@my_hash=self.coords.hash
 	end
-	def neighbors
+	def calculate_neighbors
 		neighbors_array=[]
 		self.coords.each_index do |i|
 			temp_coords=self.coords.dup
@@ -28,8 +30,12 @@ class Square
 		end
 		return neighbors_array
 	end
+	def neighbors
+		@@neighbors[self]||=calculate_neighbors #optimization
+	end
 	def hash
-		return self.coords.hash
+		@my_hash #optimization
+# 		return self.coords.hash
 	end
 	def eql?(other)
 		return self.coords==other.coords
