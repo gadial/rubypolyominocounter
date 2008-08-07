@@ -9,6 +9,12 @@ class Array
 	end
 end
 
+class Set
+	def to_s
+		self.to_a.inspect
+	end
+end
+
 class Square
 	@@neighbors=Hash.new #optimization
 	include Comparable
@@ -100,11 +106,12 @@ class Grid
 end
 
 class RedelmeierAlgorithm
-	attr_accessor :n, :d, :grid, :count, :polyominoes, :counts_tree_polyominoes
+	attr_accessor :n, :d, :grid, :count, :polyominoes, :counts_tree_polyominoes, :verbose
 	def initialize(options)
 		self.n=options[:n]
 		self.d=options[:d]
 		self.counts_tree_polyominoes=(options[:trees]==true)
+		self.verbose=options[:verbose]
 	end
 
 	def add_square(untried_set,new_square)
@@ -120,8 +127,10 @@ class RedelmeierAlgorithm
                 self.grid=Grid.new(self.d)
                 untried_set=[grid.origin]
                 self.count=[0]*self.n
-				self.polyominoes=[]
-				n.times {|i| self.polyominoes[i]=[]}
+		if self.verbose
+			self.polyominoes=[]
+			n.times {|i| self.polyominoes[i]=[]}
+		end
                 recurse(1,untried_set)
 		return self
 	end
@@ -132,13 +141,24 @@ class RedelmeierAlgorithm
 			new_square=untried_set.pop
 			new_untried_set=add_square(untried_set,new_square)
 			self.count[current_size-1]+=1
-			self.polyominoes[current_size-1] << self.grid.squares.dup
+			self.polyominoes[current_size-1] << self.grid.squares.dup if self.verbose
 			recurse(current_size+1,new_untried_set) unless current_size>=self.n
 			self.grid.remove_square(new_square)
 		end
 	end
 	def print_results
 		puts count.inspect
+		if self.verbose
+                  File.open("polyomino_list_#{algorithm_summary_text}.txt","w") do |file|
+                          self.polyominoes.each_index do |i|
+                                  file.puts("Polyominoes of size #{i+1}:")
+                                  file.puts(self.polyominoes[i])
+                          end
+                  end
+		end
+	end
+	def algorithm_summary_text
+		"#{self.n}-#{self.d}-d#{self.counts_tree_polyominoes ? "-trees" : ""}"
 	end
 end
 
@@ -157,6 +177,9 @@ def parse_options
   end
   opts.on("-d D", "(mandatory)", Integer) do |d|
     options[:d] = d
+  end
+  opts.on("-v", "--verbose") do
+	options[:verbose]=true
   end
 
   begin
