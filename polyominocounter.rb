@@ -7,6 +7,9 @@ class Array
 	def count_item(x)
 		self.inject(0){|sum, item| x==item ? sum+1 : sum}
 	end
+	def count_items(items_array)
+		self.inject(0){|sum, item| sum+items_array.count_item(item)}
+	end
 end
 
 class Set
@@ -23,21 +26,29 @@ class Square
 		self.coords=coords
 		@my_hash=self.coords.hash
 	end
-	def calculate_neighbors
+	def calculate_neighbors(cylinder_width = nil)
 		neighbors_array=[]
 		self.coords.each_index do |i|
 			temp_coords=self.coords.dup
 			temp_coords[i] +=1
+			if cylinder_width and i==1 and temp_coords[i] == cylinder_width
+				temp_coords[i] = 0
+				temp_coords[i-1] += 1
+			end
 			neighbors_array << Square.new(temp_coords)
 
 			temp_coords=self.coords.dup
 			temp_coords[i] -=1
+			if cylinder_width and i==1 and temp_coords[i] < 0
+				temp_coords[i] = cylinder_width-1
+				temp_coords[i-1] -= 1
+			end
 			neighbors_array << Square.new(temp_coords)
 		end
 		return neighbors_array
 	end
-	def neighbors
-		@@neighbors[self]||=calculate_neighbors #optimization
+	def neighbors(cylinder_width = nil)
+		@@neighbors[self]||=calculate_neighbors(cylinder_width) #optimization
 	end
 	def hash
 		@my_hash #optimization
@@ -58,16 +69,21 @@ class Square
 end
 
 class Grid
-	attr_reader :squares
-	def initialize(dimensions)
+	attr_reader :squares, :cylinder_width
+	def initialize(dimensions, cylinder_width)
 		@dimensions=dimensions
 		@squares = Set.new
+		@cylinder_width = cylinder_width
 	end
 	def origin
 		return Square.new([0]*@dimensions)
 	end
 	def << (square)
-		@squares << square
+		case square
+		when Square:	@squares << square
+		when Array:	@squares << Square.new(square)
+		end
+		return self
 	end
 	def remove_square(square)
 		squares.delete(square)
@@ -100,8 +116,8 @@ class Grid
 	def new_neighbors(square)
 		#neighbors of square that are not neighbors of any other polyomino square
 		#assumes square is not yet in the polyomino
-		old_neighbors=@squares.collect{|s| s.neighbors}.flatten.uniq
-		return square.neighbors.reject{|s| old_neighbors.include?(s) or @squares.include?(s) or s<self.origin}
+		old_neighbors=@squares.collect{|s| s.neighbors(@cylinder_width)}.flatten.uniq
+		return square.neighbors(@cylinder_width).reject{|s| old_neighbors.include?(s) or @squares.include?(s) or s<self.origin}
 	end
 end
 
@@ -112,6 +128,7 @@ class RedelmeierAlgorithm
 		self.d=options[:d]
 		self.counts_tree_polyominoes=(options[:trees]==true)
 		self.verbose=options[:verbose]
+		self.grid=Grid.new(self.d,options[:cylinder])
 	end
 
 	def add_square(untried_set,new_square)
@@ -119,12 +136,12 @@ class RedelmeierAlgorithm
 		new_neighbors=self.grid.new_neighbors(new_square)
 		new_untried_set+=new_neighbors
 		self.grid << new_square
-		new_untried_set.reject!{|s| self.grid.squares.collect{|x| x.neighbors}.flatten.count_item(s)>1} if self.counts_tree_polyominoes
+# 		new_untried_set.reject!{|s| self.grid.squares.collect{|x| x.neighbors}.flatten.count_item(s)>1} if self.counts_tree_polyominoes
+		new_untried_set.reject!{|s| s.neighbors(self.grid.cylinder_width).count_items(self.grid.squares.to_a)>1} if self.counts_tree_polyominoes
 		return new_untried_set
 	end
 
 	def run
-                self.grid=Grid.new(self.d)
                 untried_set=[grid.origin]
                 self.count=[0]*self.n
 		if self.verbose
@@ -141,7 +158,7 @@ class RedelmeierAlgorithm
 			new_square=untried_set.pop
 			new_untried_set=add_square(untried_set,new_square)
 			self.count[current_size-1]+=1
-			self.polyominoes[current_size-1] << self.grid.squares.dup if self.verbose
+			self.polyominoes[current_size-1] << self.grid.squares.dup.to_a.sort if self.verbose
 			recurse(current_size+1,new_untried_set) unless current_size>=self.n
 			self.grid.remove_square(new_square)
 		end
@@ -151,8 +168,8 @@ class RedelmeierAlgorithm
 		if self.verbose
                   File.open("polyomino_list_#{algorithm_summary_text}.txt","w") do |file|
                           self.polyominoes.each_index do |i|
-                                  file.puts("Polyominoes of size #{i+1}:")
-                                  file.puts(self.polyominoes[i])
+#                                   file.puts("Polyominoes of size #{i+1}:")
+                                  self.polyominoes[i].each{|x| file.puts(x.inspect)}
                           end
                   end
 		end
@@ -180,6 +197,9 @@ def parse_options
   end
   opts.on("-v", "--verbose") do
 	options[:verbose]=true
+  end
+  opts.on("-c W", "--cylinder") do |w|
+	options[:cylinder]=w.to_i
   end
 
   begin
